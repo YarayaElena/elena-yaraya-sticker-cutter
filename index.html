@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Елена Ярая — Обработка стикеров</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            background: #0f0f0f;
+            color: white;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            padding: 20px;
+            background: #111;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        header img { width: 40px; margin-right: 10px; }
+        header h1 { margin: 0; font-size: 1.5em; }
+        .upload-box {
+            margin: 40px auto;
+            padding: 30px;
+            border: 2px dashed #555;
+            border-radius: 10px;
+            width: 300px;
+            background-color: #1a1a1a;
+        }
+        input[type="file"] { margin: 20px 0; color: white; }
+        button {
+            padding: 12px 24px;
+            background: #FFCF53;
+            color: black;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:disabled { background: #555; color: #ccc; }
+        #status { margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="/static/logo.png" alt="Логотип">
+        <h1>Елена Ярая</h1>
+    </header>
+    <p style="color:#FFCF53; text-align:center; margin: 10px 0;">Обработка стикеров</p>
+    <div class="upload-box">
+        <input type="file" id="imageInput" accept="image/*"><br>
+        <button onclick="uploadImage()" id="uploadBtn">Разрезать стикеры</button>
+        <p id="status"></p>
+    </div>
+    <script>
+        async function uploadImage() {
+            const fileInput = document.getElementById('imageInput');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const status = document.getElementById('status');
+            if (!fileInput.files.length) {
+                alert('Сначала выбери изображение!');
+                return;
+            }
+            const form = new FormData();
+            form.append('file', fileInput.files[0]);
+
+            uploadBtn.disabled = true;
+            status.textContent = 'Обработка…';
+
+            try {
+                const res = await fetch('/upload', { method: 'POST', body: form });
+                if (!res.ok) throw new Error(res.statusText);
+                const blob = await res.blob();
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'stickers.zip';
+                link.click();
+                status.textContent = 'Готово! Скачан stickers.zip';
+            } catch (e) {
+                status.textContent = 'Ошибка: ' + e.message;
+            }
+            uploadBtn.disabled = false;
+        }
+    </script>
+</body>
+</html>
