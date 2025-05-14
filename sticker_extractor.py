@@ -4,19 +4,19 @@ import cv2
 
 def extract_stickers(input_path, output_dir):
     """
-    Разрезает изображение с несколькими наклейками, объединяя разорванные части.
+    Разрезает изображение с несколькими наклейками, предотвращая их слипание.
     Сохраняет каждый стикер как PNG в output_dir и возвращает список путей.
     """
     input_path = Path(input_path)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Загружаем изображение (с учётом alpha)
+    # Загрузка изображения (с учетом alpha)
     img = cv2.imread(str(input_path), cv2.IMREAD_UNCHANGED)
     if img is None:
         raise ValueError("Не удалось загрузить изображение")
 
-    # Формируем маску
+    # Создаем маску: alpha-канал или порог по яркости
     if img.shape[2] == 4:
         _, _, _, alpha = cv2.split(img)
         mask = alpha
@@ -24,19 +24,20 @@ def extract_stickers(input_path, output_dir):
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         _, mask = cv2.threshold(gray, 240, 255, cv2.THRESH_BINARY_INV)
 
-    # Объединяем части: dilate и close
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (50, 50))
-    mask = cv2.dilate(mask, kernel, iterations=2)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=2)
-    mask = cv2.erode(mask, kernel, iterations=1)
+    # Морфологическая открытие для отделения близко расположенных объектов
+    sep_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
+    mask_open = cv2.morphologyEx(mask, cv2.MORPH_OPEN, sep_kernel, iterations=2)
+
+    # Затем закрытие для заполнения дыр в объектах
+    mask_close = cv2.morphologyEx(mask_open, cv2.MORPH_CLOSE, sep_kernel, iterations=2)
 
     # Находим контуры
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(mask_close, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     results = []
     for idx, cnt in enumerate(contours, start=1):
         x, y, w, h = cv2.boundingRect(cnt)
-        if w * h < 5000:
+        if w * h < 1000:
             continue
         crop = img[y:y+h, x:x+w]
 
