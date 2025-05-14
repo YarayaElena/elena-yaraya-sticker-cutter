@@ -10,12 +10,12 @@
             background: #0f0f0f;
             color: white;
             text-align: center;
-            padding: 0;
             margin: 0;
+            padding: 0;
         }
         header {
-            padding: 20px;
             background: #111;
+            padding: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -24,7 +24,10 @@
             width: 40px;
             margin-right: 10px;
         }
-        h1 { margin: 0; font-size: 1.5em; }
+        h1 {
+            margin: 0;
+            font-size: 1.5em;
+        }
         .upload-box {
             margin: 20px auto;
             padding: 20px;
@@ -46,6 +49,7 @@
             border-radius: 5px;
             cursor: pointer;
             font-weight: bold;
+            margin: 5px;
         }
         #gallery img {
             width: 150px;
@@ -53,7 +57,9 @@
             border-radius: 12px;
             background: #fff;
         }
-        #status { margin-top: 10px; }
+        #status {
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -66,6 +72,7 @@
     <div class="upload-box">
         <input type="file" id="imageInput" accept="image/*"><br>
         <button onclick="uploadImage()" id="uploadBtn">Разрезать стикеры</button>
+        <button onclick="downloadAll()">Скачать все</button>
         <p id="status"></p>
     </div>
 
@@ -94,14 +101,18 @@
 
                 json.files.forEach(filename => {
                     const img = document.createElement('img');
-                    img.src = `/static/temp/${filename}`;
+                    img.src = `/static/output/${filename}`;
                     gallery.appendChild(img);
                 });
-                status.textContent = 'Готово! Нажми и удерживай на изображении, чтобы сохранить.';
+                status.textContent = 'Готово! Нажми и удерживай, чтобы сохранить.';
             } catch (err) {
                 status.textContent = 'Ошибка: ' + err.message;
             }
             btn.disabled = false;
+        }
+
+        function downloadAll() {
+            window.location.href = '/download-all';
         }
     </script>
 </body>
