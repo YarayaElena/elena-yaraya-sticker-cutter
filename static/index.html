@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Елена Ярая — Обработка стикеров</title>
+    <title>Елена Ярая — Стикеры</title>
     <style>
         body {
             font-family: sans-serif;
-            text-align: center;
             background: #0f0f0f;
             color: white;
-            margin: 0;
+            text-align: center;
             padding: 0;
+            margin: 0;
         }
         header {
             padding: 20px;
@@ -20,28 +20,40 @@
             align-items: center;
             justify-content: center;
         }
-        header img { width: 40px; margin-right: 10px; }
-        header h1 { margin: 0; font-size: 1.5em; }
-        .upload-box {
-            margin: 40px auto;
-            padding: 30px;
-            border: 2px dashed #555;
-            border-radius: 10px;
-            width: 300px;
-            background-color: #1a1a1a;
+        header img {
+            width: 40px;
+            margin-right: 10px;
         }
-        input[type="file"] { margin: 20px 0; color: white; }
+        h1 { margin: 0; font-size: 1.5em; }
+        .upload-box {
+            margin: 20px auto;
+            padding: 20px;
+            border: 2px dashed #555;
+            width: 90%;
+            max-width: 400px;
+            background-color: #1a1a1a;
+            border-radius: 10px;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+            color: white;
+        }
         button {
-            padding: 12px 24px;
+            padding: 10px 20px;
             background: #FFCF53;
             color: black;
-            font-weight: bold;
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            font-weight: bold;
         }
-        button:disabled { background: #555; color: #ccc; }
-        #status { margin-top: 15px; }
+        #gallery img {
+            width: 150px;
+            margin: 10px;
+            border-radius: 12px;
+            background: #fff;
+        }
+        #status { margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -49,40 +61,47 @@
         <img src="/static/logo.png" alt="Логотип">
         <h1>Елена Ярая</h1>
     </header>
-    <p style="color:#FFCF53; text-align:center; margin: 10px 0;">Обработка стикеров</p>
+    <p style="color:#FFCF53">Обработка стикеров</p>
+
     <div class="upload-box">
         <input type="file" id="imageInput" accept="image/*"><br>
         <button onclick="uploadImage()" id="uploadBtn">Разрезать стикеры</button>
         <p id="status"></p>
     </div>
+
+    <div id="gallery"></div>
+
     <script>
         async function uploadImage() {
-            const fileInput = document.getElementById('imageInput');
-            const uploadBtn = document.getElementById('uploadBtn');
+            const input = document.getElementById('imageInput');
+            const btn = document.getElementById('uploadBtn');
             const status = document.getElementById('status');
-            if (!fileInput.files.length) {
-                alert('Сначала выбери изображение!');
-                return;
-            }
-            const form = new FormData();
-            form.append('file', fileInput.files[0]);
+            const gallery = document.getElementById('gallery');
 
-            uploadBtn.disabled = true;
-            status.textContent = 'Обработка…';
+            if (!input.files.length) return alert('Выбери изображение!');
+            const form = new FormData();
+            form.append('file', input.files[0]);
+
+            btn.disabled = true;
+            status.textContent = 'Обработка...';
+            gallery.innerHTML = '';
 
             try {
                 const res = await fetch('/upload', { method: 'POST', body: form });
-                if (!res.ok) throw new Error(res.statusText);
-                const blob = await res.blob();
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = 'stickers.zip';
-                link.click();
-                status.textContent = 'Готово! Скачан stickers.zip';
-            } catch (e) {
-                status.textContent = 'Ошибка: ' + e.message;
+                const json = await res.json();
+
+                if (!json.files) throw new Error('Нет файлов');
+
+                json.files.forEach(filename => {
+                    const img = document.createElement('img');
+                    img.src = `/static/temp/${filename}`;
+                    gallery.appendChild(img);
+                });
+                status.textContent = 'Готово! Нажми и удерживай на изображении, чтобы сохранить.';
+            } catch (err) {
+                status.textContent = 'Ошибка: ' + err.message;
             }
-            uploadBtn.disabled = false;
+            btn.disabled = false;
         }
     </script>
 </body>
