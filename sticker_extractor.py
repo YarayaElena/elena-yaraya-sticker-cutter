@@ -1,54 +1,117 @@
-from pathlib import Path
-from PIL import Image
-import cv2
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Елена Ярая — Стикеры</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #0f0f0f;
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background: #111;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        header img {
+            width: 40px;
+            margin-right: 10px;
+        }
+        h1 { margin: 0; font-size: 1.5em; }
+        .upload-box {
+            margin: 20px auto;
+            padding: 20px;
+            border: 2px dashed #555;
+            width: 90%;
+            max-width: 400px;
+            background-color: #1a1a1a;
+            border-radius: 10px;
+        }
+        input[type="file"] { margin: 10px 0; color: white; }
+        button {
+            padding: 10px 20px;
+            background: #FFCF53;
+            color: black;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+        }
+        #gallery a {
+            display: inline-block;
+            margin: 10px;
+        }
+        #gallery img {
+            width: 150px;
+            border-radius: 12px;
+            background: #fff;
+            display: block;
+        }
+        #status { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="/static/logo.png" alt="Логотип">
+        <h1>Елена Ярая</h1>
+    </header>
+    <p style="color:#FFCF53; margin: 10px 0;">Обработка стикеров</p>
 
-def extract_stickers(input_path, output_dir):
-    """
-    Разрезает изображение с несколькими наклейками, объединяя разорванные части.
-    Сохраняет каждый стикер как PNG в output_dir и возвращает список путей.
-    """
-    input_path = Path(input_path)
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    <div class="upload-box">
+        <input type="file" id="imageInput" accept="image/*"><br>
+        <button onclick="uploadImage()" id="uploadBtn">Разрезать стикеры</button>
+        <p id="status"></p>
+    </div>
 
-    # Загружаем изображение (с учётом альфа-канала)
-    img = cv2.imread(str(input_path), cv2.IMREAD_UNCHANGED)
-    if img is None:
-        raise ValueError("Не удалось загрузить изображение")
+    <div id="gallery"></div>
 
-    # Формируем маску: alpha-канал или бинаризация по яркости
-    if img.shape[2] == 4:
-        _, _, _, alpha = cv2.split(img)
-        mask = alpha
-    else:
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        _, mask = cv2.threshold(gray, 240, 255, cv2.THRESH_BINARY_INV)
+    <script>
+        async function uploadImage() {
+            const input = document.getElementById('imageInput');
+            const btn = document.getElementById('uploadBtn');
+            const status = document.getElementById('status');
+            const gallery = document.getElementById('gallery');
 
-    # Укрупняем области, чтобы хвосты и тело склеивались в один контур
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (50, 50))
-    mask = cv2.dilate(mask, kernel, iterations=2)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=2)
-    mask = cv2.erode(mask, kernel, iterations=1)
+            if (!input.files.length) {
+                alert('Выбери изображение!');
+                return;
+            }
+            const form = new FormData();
+            form.append('file', input.files[0]);
 
-    # Находим контуры
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            btn.disabled = true;
+            status.textContent = 'Обработка...';
+            gallery.innerHTML = '';
 
-    results = []
-    for idx, cnt in enumerate(contours, start=1):
-        x, y, w, h = cv2.boundingRect(cnt)
-        # Отбрасываем очень мелкие (шум)
-        if w * h < 5000:
-            continue
-        crop = img[y:y+h, x:x+w]
+            try {
+                const res = await fetch('/upload', { method: 'POST', body: form });
+                const json = await res.json();
+                if (!json.files) throw new Error('Нет файлов');
 
-        # Конвертируем обрезок в RGBA через PIL
-        if crop.shape[2] == 4:
-            pil_img = Image.fromarray(cv2.cvtColor(crop, cv2.COLOR_BGRA2RGBA))
-        else:
-            pil_img = Image.fromarray(cv2.cvtColor(crop, cv2.COLOR_BGR2RGBA))
-
-        out_path = output_dir / f"sticker_{idx}.png"
-        pil_img.save(out_path)
-        results.append(str(out_path))
-
-    return results
+                json.files.forEach(filename => {
+                    const link = document.createElement('a');
+                    link.href = `/static/output/${filename}`;
+                    link.download = filename;
+                    const img = document.createElement('img');
+                    img.src = `/static/output/${filename}`;
+                    img.alt = filename;
+                    link.appendChild(img);
+                    gallery.appendChild(link);
+                });
+                status.textContent = 'Готово! Нажми на стикер, чтобы скачать.';
+            } catch (err) {
+                status.textContent = 'Ошибка: ' + err.message;
+            }
+            btn.disabled = false;
+        }
+    </script>
+</body>
+</html>
