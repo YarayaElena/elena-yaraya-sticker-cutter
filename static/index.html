@@ -3,122 +3,163 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Елена Ярая — Обработка стикеров</title>
+  <title>Елена Ярая — Подготовка стикеров</title>
   <link rel="manifest" href="/static/telegram-web-app-manifest.json" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
+    /* Общие настройки */
     body {
       margin: 0;
       padding: 0;
       font-family: sans-serif;
-      background: #0f0f0f;
-      color: white;
-      text-align: center;
+      background-color: #000000;
+      color: #FFFFFF;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      box-sizing: border-box;
     }
     header {
-      padding: 20px;
-      background: #111;
+      width: 100%;
+      padding: 20px 0;
+      background-color: #000000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    /* Логотип в кружочке */
+    .logo-circle {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background-color: #FFFFFF;
       display: flex;
       align-items: center;
       justify-content: center;
     }
-    header img {
-      width: 80px;
-      margin-right: 10px;
+    .logo-circle img {
+      width: 60px;
+      height: 60px;
+      object-fit: contain;
     }
     header h1 {
-      margin: 0;
+      margin: 12px 0 4px;
       font-size: 1.5em;
+      color: #FFFFFF;
     }
+    /* Основной заголовок */
+    .subtitle {
+      margin: 8px 0;
+      font-size: 1.25em;
+      color: #FFCF53;
+    }
+    /* Блок загрузки */
     .upload-box {
-      margin: 30px auto;
-      padding: 30px;
-      border: 2px dashed #555;
-      border-radius: 10px;
+      margin: 40px auto;
+      padding: 24px;
+      border-radius: 12px;
+      background-color: #1a1a1a;
       width: 90%;
       max-width: 360px;
-      background-color: #1a1a1a;
+      text-align: center;
     }
     .upload-box input[type="file"] {
-      color: white;
-      margin: 20px 0;
+      color: #FFFFFF;
+      margin-bottom: 16px;
     }
+    /* Кнопка с градиентом */
     .upload-box button {
-      padding: 10px 20px;
-      background: #FFCF53;
-      color: black;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
+      padding: 12px 24px;
+      font-size: 1em;
       font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #FFCF53, #FFD966);
+      color: #000000;
+      cursor: pointer;
+      display: block;
+      margin: 0 auto;
     }
+    .upload-box button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    /* Статус обработки */
+    #status {
+      margin-top: 12px;
+      font-size: 0.95em;
+      color: #FFCF53;
+      min-height: 1.2em;
+    }
+    /* Галерея стикеров */
     #gallery {
+      width: 100%;
+      max-width: 360px;
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 12px;
       justify-content: center;
-      padding: 10px;
+      padding-bottom: 40px;
     }
     #gallery a img {
-      width: 150px;
-      height: 150px;
+      width: 100px;
+      height: 100px;
       object-fit: contain;
       background: #1a1a1a;
       border-radius: 12px;
-      border: 1px solid #555;
-    }
-    #status {
-      margin-top: 10px;
-      color: #FFCF53;
+      border: 1px solid #333333;
     }
   </style>
 </head>
 <body>
   <header>
-    <img src="/static/logo.png" alt="Логотип" />
+    <div class="logo-circle">
+      <img src="/static/logo.png" alt="Логотип" />
+    </div>
     <h1>Елена Ярая</h1>
+    <div class="subtitle">Подготовка стикеров</div>
   </header>
-  <p style="color:#FFCF53; margin: 10px 0;">Обработка стикеров</p>
 
   <div class="upload-box">
-    <input type="file" id="imageInput" accept="image/*" /><br />
+    <input type="file" id="imageInput" accept="image/*" />
     <button id="uploadBtn">Разрезать стикеры</button>
-    <p id="status"></p>
+    <div id="status"></div>
   </div>
 
   <div id="gallery"></div>
 
   <script>
-    // Если приложение в Telegram, проинициализировать
+    // Инициализация Telegram WebApp, если запущено внутри Telegram
     if (window.Telegram && Telegram.WebApp) {
       Telegram.WebApp.ready();
       Telegram.WebApp.expand();
-      document.body.style.background = Telegram.WebApp.themeParams.bg_color || '#0f0f0f';
+      document.body.style.backgroundColor = Telegram.WebApp.themeParams.bg_color || '#000000';
     }
 
-    const uploadBtn = document.getElementById('uploadBtn');
     const input = document.getElementById('imageInput');
+    const btn = document.getElementById('uploadBtn');
     const status = document.getElementById('status');
     const gallery = document.getElementById('gallery');
 
-    uploadBtn.addEventListener('click', async () => {
+    btn.addEventListener('click', async () => {
       if (!input.files.length) {
         alert('Сначала выбери изображение!');
         return;
       }
-      const form = new FormData();
-      form.append('file', input.files[0]);
+      const formData = new FormData();
+      formData.append('file', input.files[0]);
 
-      uploadBtn.disabled = true;
+      btn.disabled = true;
       status.textContent = 'Обработка...';
       gallery.innerHTML = '';
 
       try {
-        const res = await fetch('/upload', { method: 'POST', body: form });
+        const res = await fetch('/upload', { method: 'POST', body: formData });
         const json = await res.json();
         if (!json.files) throw new Error('Нет файлов');
 
-        json.files.forEach((fn) => {
+        json.files.forEach(fn => {
           const link = document.createElement('a');
           link.href = `/static/output/${fn}`;
           link.download = fn;
@@ -127,12 +168,12 @@
           link.appendChild(img);
           gallery.appendChild(link);
         });
-        status.textContent = 'Готово! Нажми на стикер, чтобы скачать.';
+        status.textContent = 'Готово! Кликни по стикеру, чтобы скачать.';
       } catch (e) {
         status.textContent = 'Ошибка: ' + e.message;
       }
 
-      uploadBtn.disabled = false;
+      btn.disabled = false;
     });
   </script>
 </body>
