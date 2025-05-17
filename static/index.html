@@ -4,115 +4,96 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Елена Ярая — Стикеры</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
             font-family: sans-serif;
-            background: #0f0f0f;
-            color: white;
-            text-align: center;
             margin: 0;
             padding: 0;
+            background-color: #f8f8f8;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
         }
         header {
-            background: #111;
-            padding: 20px;
+            padding: 1em;
+            text-align: center;
+        }
+        .container {
+            padding: 1em;
+            width: 100%;
+            max-width: 500px;
+        }
+        .preview {
+            margin-top: 1em;
             display: flex;
-            align-items: center;
-            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.5em;
         }
-        header img {
-            width: 40px;
-            margin-right: 10px;
-        }
-        h1 {
-            margin: 0;
-            font-size: 1.5em;
-        }
-        .upload-box {
-            margin: 20px auto;
-            padding: 20px;
-            border: 2px dashed #555;
-            width: 90%;
-            max-width: 400px;
-            background-color: #1a1a1a;
-            border-radius: 10px;
-        }
-        input[type="file"] {
-            margin: 10px 0;
-            color: white;
+        .preview img {
+            width: 128px;
+            height: 128px;
+            object-fit: contain;
+            border: 1px solid #ccc;
+            background: white;
         }
         button {
-            padding: 10px 20px;
-            background: #FFCF53;
-            color: black;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            margin: 5px;
-        }
-        #gallery img {
-            width: 150px;
-            margin: 10px;
-            border-radius: 12px;
-            background: #fff;
-        }
-        #status {
-            margin-top: 10px;
+            margin-top: 1em;
+            padding: 0.5em 1em;
+            font-size: 1em;
         }
     </style>
 </head>
 <body>
     <header>
-        <img src="/static/logo.png" alt="Логотип">
-        <h1>Елена Ярая</h1>
+        <h1>Елена Ярая — Стикеры</h1>
+        <p>Загрузите изображение со стикерами</p>
     </header>
-    <p style="color:#FFCF53">Обработка стикеров</p>
-
-    <div class="upload-box">
-        <input type="file" id="imageInput" accept="image/*"><br>
-        <button onclick="uploadImage()" id="uploadBtn">Разрезать стикеры</button>
-        <button onclick="downloadAll()">Скачать все</button>
-        <p id="status"></p>
+    <div class="container">
+        <form id="upload-form">
+            <input type="file" name="file" accept="image/*" required>
+            <button type="submit">Загрузить</button>
+        </form>
+        <div class="preview" id="preview"></div>
     </div>
 
-    <div id="gallery"></div>
-
     <script>
-        async function uploadImage() {
-            const input = document.getElementById('imageInput');
-            const btn = document.getElementById('uploadBtn');
-            const status = document.getElementById('status');
-            const gallery = document.getElementById('gallery');
+        const form = document.getElementById('upload-form');
+        const preview = document.getElementById('preview');
 
-            if (!input.files.length) return alert('Выбери изображение!');
-            const form = new FormData();
-            form.append('file', input.files[0]);
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fileInput = form.querySelector('input[type="file"]');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
 
-            btn.disabled = true;
-            status.textContent = 'Обработка...';
-            gallery.innerHTML = '';
+            const res = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
 
-            try {
-                const res = await fetch('/upload', { method: 'POST', body: form });
-                const json = await res.json();
-
-                if (!json.files) throw new Error('Нет файлов');
-
-                json.files.forEach(filename => {
+            if (res.ok) {
+                const images = await res.json();
+                preview.innerHTML = '';
+                images.forEach(src => {
+                    const link = document.createElement('a');
+                    link.href = src;
+                    link.download = src.split('/').pop();
                     const img = document.createElement('img');
-                    img.src = `/static/output/${filename}`;
-                    gallery.appendChild(img);
+                    img.src = src;
+                    link.appendChild(img);
+                    preview.appendChild(link);
                 });
-                status.textContent = 'Готово! Нажми и удерживай, чтобы сохранить.';
-            } catch (err) {
-                status.textContent = 'Ошибка: ' + err.message;
             }
-            btn.disabled = false;
-        }
+        });
 
-        function downloadAll() {
-            window.location.href = '/download-all';
+        // Telegram адаптация
+        if (window.Telegram && window.Telegram.WebApp) {
+            Telegram.WebApp.expand();
+            document.body.style.background = Telegram.WebApp.themeParams.bg_color || '#ffffff';
         }
     </script>
 </body>
