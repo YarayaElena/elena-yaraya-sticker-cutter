@@ -1,83 +1,139 @@
 <!DOCTYPE html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ярая — Стикеры</title>
-    <link rel="manifest" href="/static/telegram-web-app-manifest.json" />
-    <style>
-      body {
-        font-family: sans-serif;
-        background-color: #fffbe6;
-        margin: 0;
-        padding: 2em;
-        text-align: center;
-      }
-      h1 {
-        margin-bottom: 0.5em;
-      }
-      input[type="file"] {
-        margin: 1em 0;
-      }
-      .stickers {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1em;
-        justify-content: center;
-        margin-top: 2em;
-      }
-      .sticker {
-        width: 128px;
-        height: 128px;
-        object-fit: contain;
-        background: #fff;
-        border: 1px solid #ccc;
-        padding: 0.5em;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>✂️ Нарезка стикеров</h1>
-    <form id="uploadForm" enctype="multipart/form-data">
-      <input type="file" name="file" accept="image/*" required />
-      <br />
-      <button type="submit">Загрузить и нарезать</button>
-    </form>
-    <div id="result" class="stickers"></div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Елена Ярая — Обработка стикеров</title>
+  <link rel="manifest" href="/static/telegram-web-app-manifest.json" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      background: #0f0f0f;
+      color: white;
+      text-align: center;
+    }
+    header {
+      padding: 20px;
+      background: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    header img {
+      width: 80px;
+      margin-right: 10px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.5em;
+    }
+    .upload-box {
+      margin: 30px auto;
+      padding: 30px;
+      border: 2px dashed #555;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 360px;
+      background-color: #1a1a1a;
+    }
+    .upload-box input[type="file"] {
+      color: white;
+      margin: 20px 0;
+    }
+    .upload-box button {
+      padding: 10px 20px;
+      background: #FFCF53;
+      color: black;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #gallery {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      padding: 10px;
+    }
+    #gallery a img {
+      width: 150px;
+      height: 150px;
+      object-fit: contain;
+      background: #1a1a1a;
+      border-radius: 12px;
+      border: 1px solid #555;
+    }
+    #status {
+      margin-top: 10px;
+      color: #FFCF53;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="/static/logo.png" alt="Логотип" />
+    <h1>Елена Ярая</h1>
+  </header>
+  <p style="color:#FFCF53; margin: 10px 0;">Обработка стикеров</p>
 
-    <script>
-      const form = document.getElementById("uploadForm");
-      const result = document.getElementById("result");
+  <div class="upload-box">
+    <input type="file" id="imageInput" accept="image/*" /><br />
+    <button id="uploadBtn">Разрезать стикеры</button>
+    <p id="status"></p>
+  </div>
 
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const fileInput = form.querySelector('input[type="file"]');
-        const formData = new FormData();
-        formData.append("file", fileInput.files[0]);
+  <div id="gallery"></div>
 
-        result.innerHTML = "⏳ Нарезка...";
+  <script>
+    // Если приложение в Telegram, проинициализировать
+    if (window.Telegram && Telegram.WebApp) {
+      Telegram.WebApp.ready();
+      Telegram.WebApp.expand();
+      document.body.style.background = Telegram.WebApp.themeParams.bg_color || '#0f0f0f';
+    }
 
-        const response = await fetch("/upload", {
-          method: "POST",
-          body: formData,
+    const uploadBtn = document.getElementById('uploadBtn');
+    const input = document.getElementById('imageInput');
+    const status = document.getElementById('status');
+    const gallery = document.getElementById('gallery');
+
+    uploadBtn.addEventListener('click', async () => {
+      if (!input.files.length) {
+        alert('Сначала выбери изображение!');
+        return;
+      }
+      const form = new FormData();
+      form.append('file', input.files[0]);
+
+      uploadBtn.disabled = true;
+      status.textContent = 'Обработка...';
+      gallery.innerHTML = '';
+
+      try {
+        const res = await fetch('/upload', { method: 'POST', body: form });
+        const json = await res.json();
+        if (!json.files) throw new Error('Нет файлов');
+
+        json.files.forEach((fn) => {
+          const link = document.createElement('a');
+          link.href = `/static/output/${fn}`;
+          link.download = fn;
+          const img = document.createElement('img');
+          img.src = link.href;
+          link.appendChild(img);
+          gallery.appendChild(link);
         });
+        status.textContent = 'Готово! Нажми на стикер, чтобы скачать.';
+      } catch (e) {
+        status.textContent = 'Ошибка: ' + e.message;
+      }
 
-        const data = await response.json();
-        result.innerHTML = "";
-
-        if (data.files && data.files.length > 0) {
-          data.files.forEach((filename) => {
-            const img = document.createElement("img");
-            img.src = `/static/output/${filename}`;
-            img.alt = "Стикер";
-            img.className = "sticker";
-            img.onclick = () => window.open(img.src, "_blank");
-            result.appendChild(img);
-          });
-        } else {
-          result.textContent = "❌ Не удалось нарезать стикеры.";
-        }
-      });
-    </script>
-  </body>
+      uploadBtn.disabled = false;
+    });
+  </script>
+</body>
 </html>
