@@ -1,100 +1,83 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Елена Ярая — Стикеры</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ярая — Стикеры</title>
+    <link rel="manifest" href="/static/telegram-web-app-manifest.json" />
     <style>
-        body {
-            font-family: sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f8f8f8;
-            color: #333;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
-        header {
-            padding: 1em;
-            text-align: center;
-        }
-        .container {
-            padding: 1em;
-            width: 100%;
-            max-width: 500px;
-        }
-        .preview {
-            margin-top: 1em;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5em;
-        }
-        .preview img {
-            width: 128px;
-            height: 128px;
-            object-fit: contain;
-            border: 1px solid #ccc;
-            background: white;
-        }
-        button {
-            margin-top: 1em;
-            padding: 0.5em 1em;
-            font-size: 1em;
-        }
+      body {
+        font-family: sans-serif;
+        background-color: #fffbe6;
+        margin: 0;
+        padding: 2em;
+        text-align: center;
+      }
+      h1 {
+        margin-bottom: 0.5em;
+      }
+      input[type="file"] {
+        margin: 1em 0;
+      }
+      .stickers {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1em;
+        justify-content: center;
+        margin-top: 2em;
+      }
+      .sticker {
+        width: 128px;
+        height: 128px;
+        object-fit: contain;
+        background: #fff;
+        border: 1px solid #ccc;
+        padding: 0.5em;
+      }
     </style>
-</head>
-<body>
-    <header>
-        <h1>Елена Ярая — Стикеры</h1>
-        <p>Загрузите изображение со стикерами</p>
-    </header>
-    <div class="container">
-        <form id="upload-form">
-            <input type="file" name="file" accept="image/*" required>
-            <button type="submit">Загрузить</button>
-        </form>
-        <div class="preview" id="preview"></div>
-    </div>
+  </head>
+  <body>
+    <h1>✂️ Нарезка стикеров</h1>
+    <form id="uploadForm" enctype="multipart/form-data">
+      <input type="file" name="file" accept="image/*" required />
+      <br />
+      <button type="submit">Загрузить и нарезать</button>
+    </form>
+    <div id="result" class="stickers"></div>
 
     <script>
-        const form = document.getElementById('upload-form');
-        const preview = document.getElementById('preview');
+      const form = document.getElementById("uploadForm");
+      const result = document.getElementById("result");
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const fileInput = form.querySelector('input[type="file"]');
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const fileInput = form.querySelector('input[type="file"]');
+        const formData = new FormData();
+        formData.append("file", fileInput.files[0]);
 
-            const res = await fetch('/upload', {
-                method: 'POST',
-                body: formData
-            });
+        result.innerHTML = "⏳ Нарезка...";
 
-            if (res.ok) {
-                const images = await res.json();
-                preview.innerHTML = '';
-                images.forEach(src => {
-                    const link = document.createElement('a');
-                    link.href = src;
-                    link.download = src.split('/').pop();
-                    const img = document.createElement('img');
-                    img.src = src;
-                    link.appendChild(img);
-                    preview.appendChild(link);
-                });
-            }
+        const response = await fetch("/upload", {
+          method: "POST",
+          body: formData,
         });
 
-        // Telegram адаптация
-        if (window.Telegram && window.Telegram.WebApp) {
-            Telegram.WebApp.expand();
-            document.body.style.background = Telegram.WebApp.themeParams.bg_color || '#ffffff';
+        const data = await response.json();
+        result.innerHTML = "";
+
+        if (data.files && data.files.length > 0) {
+          data.files.forEach((filename) => {
+            const img = document.createElement("img");
+            img.src = `/static/output/${filename}`;
+            img.alt = "Стикер";
+            img.className = "sticker";
+            img.onclick = () => window.open(img.src, "_blank");
+            result.appendChild(img);
+          });
+        } else {
+          result.textContent = "❌ Не удалось нарезать стикеры.";
         }
+      });
     </script>
-</body>
+  </body>
 </html>
